@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "Incident": {
+      "title": "Incident",
+      "description": "A match foul play incident reviewed or logged in the VAR system",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the incident",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Incident title or description headline",
+          "maxLength": 200
+        },
+        "matchFixture": {
+          "type": "string",
+          "description": "Match fixture details, teams and venue",
+          "maxLength": 150
+        },
+        "matchMinute": {
+          "type": "string",
+          "description": "Minute of match when incident occurred",
+          "maxLength": 20
+        },
+        "incidentType": {
+          "type": "string",
+          "description": "Category of foul incident",
+          "enum": ["tackle", "penalty", "offside", "handball", "dogso", "violent_conduct"]
+        },
+        "initialOnFieldCall": {
+          "type": "string",
+          "description": "Initial call made by the on-pitch referee",
+          "maxLength": 200
+        },
+        "finalDecision": {
+          "type": "string",
+          "description": "Final ruling after VAR review",
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed incident overview",
+          "maxLength": 1000
+        },
+        "notes": {
+          "type": "string",
+          "description": "Referee official notes",
+          "maxLength": 1000
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of the user who logged the incident",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the record was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the record was last updated"
+        }
+      },
+      "required": ["id", "title", "matchFixture", "matchMinute", "incidentType", "createdBy", "createdAt", "updatedAt"]
+    },
+    "ReviewLog": {
+      "title": "ReviewLog",
+      "description": "An official VAR review action logged during a match check",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique review log ID",
+          "maxLength": 128
+        },
+        "incidentId": {
+          "type": "string",
+          "description": "Associated incident ID",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the referee or VAR official",
+          "maxLength": 128
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Email of the referee",
+          "maxLength": 254
+        },
+        "recommendedDecision": {
+          "type": "string",
+          "description": "VAR recommended decision",
+          "maxLength": 100
+        },
+        "refereeAction": {
+          "type": "string",
+          "description": "Decision status action",
+          "enum": ["CONFIRMED", "OVERTURNED", "PENDING"]
+        },
+        "confidenceScore": {
+          "type": "number",
+          "description": "AI confidence percentage"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of review log"
+        }
+      },
+      "required": ["id", "incidentId", "userId", "recommendedDecision", "refereeAction", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Profile of an official VAR referee or analyst",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User UID",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Official name of the referee",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email",
+          "maxLength": 254
+        },
+        "role": {
+          "type": "string",
+          "description": "Role in the VAR room",
+          "enum": ["referee", "var_official", "assistant_var", "replay_operator"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["id", "displayName", "email", "role", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/incidents/{incidentId}": {
+      "schema": { "$ref": "#/entities/Incident" },
+      "description": "Collection of recorded foul play match incidents and review dossiers"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/ReviewLog" },
+      "description": "Collection of referee review decisions and logs"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile of registered referee or match official"
+    }
+  }
+}

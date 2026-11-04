@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Validation: Incident Entity
+    function isValidIncident(data) {
+      return data.keys().hasAll(['id', 'title', 'matchFixture', 'matchMinute', 'incidentType', 'createdBy', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'title', 'matchFixture', 'matchMinute', 'incidentType', 'initialOnFieldCall', 'finalDecision', 'description', 'notes', 'createdBy', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.matchFixture is string && data.matchFixture.size() > 0 && data.matchFixture.size() <= 150
+        && data.matchMinute is string && data.matchMinute.size() > 0 && data.matchMinute.size() <= 20
+        && data.incidentType in ['tackle', 'penalty', 'offside', 'handball', 'dogso', 'violent_conduct']
+        && (!('initialOnFieldCall' in data) || (data.initialOnFieldCall is string && data.initialOnFieldCall.size() <= 200))
+        && (!('finalDecision' in data) || (data.finalDecision is string && data.finalDecision.size() <= 200))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() <= 128
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation: ReviewLog Entity
+    function isValidReviewLog(data) {
+      return data.keys().hasAll(['id', 'incidentId', 'userId', 'recommendedDecision', 'refereeAction', 'createdAt'])
+        && data.keys().hasOnly(['id', 'incidentId', 'userId', 'userEmail', 'recommendedDecision', 'refereeAction', 'confidenceScore', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.incidentId)
+        && data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128
+        && (!('userEmail' in data) || (data.userEmail is string && data.userEmail.size() <= 254))
+        && data.recommendedDecision is string && data.recommendedDecision.size() > 0 && data.recommendedDecision.size() <= 100
+        && data.refereeAction in ['CONFIRMED', 'OVERTURNED', 'PENDING']
+        && (!('confidenceScore' in data) || (data.confidenceScore is number && data.confidenceScore >= 0 && data.confidenceScore <= 100))
+        && data.createdAt is timestamp;
+    }
+
+    // Validation: UserProfile Entity
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['id', 'displayName', 'email', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'displayName', 'email', 'role', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 254
+        && data.role in ['referee', 'var_official', 'assistant_var', 'replay_operator']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Match Collection: Incidents
+    match /incidents/{incidentId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && isValidId(incidentId)
+        && incidentId == incoming().id
+        && incoming().createdBy == request.auth.uid
+        && isValidIncident(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(incidentId)
+        && isValidIncident(incoming())
+        && incoming().id == existing().id
+        && incoming().createdBy == existing().createdBy
+        && (existing().createdBy == request.auth.uid)
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isSignedIn()
+        && isValidId(incidentId)
+        && existing().createdBy == request.auth.uid;
+    }
+
+    // Match Collection: Reviews
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && isValidId(reviewId)
+        && reviewId == incoming().id
+        && incoming().userId == request.auth.uid
+        && isValidReviewLog(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(reviewId)
+        && isValidReviewLog(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && existing().userId == request.auth.uid
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if false;
+    }
+
+    // Match Collection: Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && incoming().id == request.auth.uid
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && userId == request.auth.uid
+        && isValidUserProfile(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+  }
+}

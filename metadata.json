@@ -1,0 +1,8 @@
+{
+  "name": "VAR Apex - AI Video Assistant Referee System",
+  "description": "Professional-grade Video Assistant Referee (VAR) operations workstation utilizing Gemini AI to analyze foul play, contact biomechanics, DOGSO, and virtual offside lines in real-time.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
